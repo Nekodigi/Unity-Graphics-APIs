@@ -1,0 +1,37 @@
+#pragma kernel Initialize
+#pragma kernel Update
+#pragma kernel Emit
+
+#include "Assets/Scripts/APIs/HLSLs/Random.cginc"
+#include "./ParticleImplementation.cginc"
+
+float _DeltaTime;
+float3 _ParticleEmitPosition;
+float _ParticleEmitDuration;
+
+[numthreads(8, 1, 1)]
+void Initialize(uint3 id : SV_DispatchThreadID)
+{
+    _DeadParticleBuffer.Append(id.x);
+}
+
+[numthreads(8, 1, 1)]
+void Update(uint3 id : SV_DispatchThreadID)
+{
+    Particle p;
+    p.set_particle(_ParticleBuffer[id.x]);
+    p.update(_DeltaTime);
+    _ParticleBuffer[id.x] = p.p;
+}
+
+[numthreads(8, 1, 1)]
+void Emit()
+{
+    uint id = _PooledParticleBuffer.Consume();
+
+    Particle p;
+    p.set_particle(_ParticleBuffer[id]);
+    p.init(id.x, _ParticleEmitPosition, normalize(random3(id) - 0.5), _ParticleEmitDuration);
+
+    _ParticleBuffer[id] = p.p;
+}
