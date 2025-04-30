@@ -36,43 +36,6 @@ class Particle : IParticle
         p.age = 0;
         p.alive = true;
     }
-
-    void update(float deltaTime)
-    {
-        uint3 targetCellIndex3 = CellIndex(float3(0, 0, 0), _SearchGridCellSize);
-        uint targetCellIndex = GetFlatCellIndex(targetCellIndex3, _ParticleBufferCount);
-        uint3 cellIndex3 = CellIndex(p.position, _SearchGridCellSize);
-        uint cellIndex = GetFlatCellIndex(cellIndex3, _ParticleBufferCount);
-        //check if they are equal
-        if (targetCellIndex == cellIndex)// && targetCellIndex.y == cellIndex.y && targetCellIndex.z == cellIndex.z
-        {
-            p.color = float4(0, 1, 0, 1);
-        }
-        else
-        {
-            p.color = float4(0, 0, 0, 1);
-        }
-
-
-        
-
-        
-        // if (cellIndex.z == 0)p.color = float4(1, 0, 0, 1);
-        // else p.color = float4(0, 1, 0, 1);
-        //p.color = cellIndex / 10000;
-        if (p.age < p.lifetime)
-        {
-            p.position += p.velocity * deltaTime;
-            p.age += deltaTime;
-
-
-            if (p.age >= p.lifetime)
-            {
-                p.alive = false;
-                _DeadParticleBuffer.Append(p.particleId);
-            }
-        }
-    }
 };
 
 
@@ -88,8 +51,7 @@ void Update(uint3 id : SV_DispatchThreadID)
     //Particle p;
     //p.set_particle(_ParticleBuffer[id.x]);
     SParticle p = _ParticleBuffer[id.x];
-    uint3 targetCellIndex3 = CellIndex(float3(0, 0, 0), _SearchGridCellSize);
-    uint targetCellIndex = GetFlatCellIndex(targetCellIndex3, _ParticleBufferCount);
+    uint3 targetCellIndex3, targetCellIndex;
     uint3 cellIndex3 = CellIndex(p.position, _SearchGridCellSize);
     uint cellIndex = GetFlatCellIndex(cellIndex3, _ParticleBufferCount);
     //check if they are equal
