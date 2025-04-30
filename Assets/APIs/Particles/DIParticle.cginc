@@ -1,5 +1,5 @@
-#ifndef PARTICLE_INCLUDED
-#define PARTICLE_INCLUDED
+#ifndef DI_PARTICLE_INCLUDED
+#define DI_PARTICLE_INCLUDED
 
 struct SParticle
 {
@@ -33,14 +33,6 @@ struct SParticle
     float spawnCount;
     float spawnTime;
     uint particleIndexInStrip;
-};
-
-
-interface IParticle
-{
-    void set_particle(SParticle p);
-
-    void update(float deltaTime);
 };
 
 

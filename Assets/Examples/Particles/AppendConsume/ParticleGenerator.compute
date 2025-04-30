@@ -2,7 +2,7 @@
 #pragma kernel Update
 #pragma kernel Emit
 
-#include "Assets/Scripts/APIs/HLSLs/Random.cginc"
+#include "Assets/APIs/Randoms/Random.cginc"
 #include "./ParticleImplementation.cginc"
 
 float _DeltaTime;

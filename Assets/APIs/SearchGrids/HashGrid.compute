@@ -2,16 +2,28 @@
 #ifndef HASH_GRID_INCLUDED
 #define HASH_GRID_INCLUDED
 
+#pragma kernel HashData
 #pragma kernel ClearCellOffsets
 #pragma kernel CalculateCellOffsets
 #pragma kernel BitonicSort
 
-#include "./HashGridData.cginc"
+#include "DIHashGrid.cginc"
+#include "Assets/APIs/Particles/Particle.cginc"
 
 void swap(uint i, uint j, uint key_i, uint key_j)
 {
     _IndexBuffer[i] = key_j;
     _IndexBuffer[j] = key_i;
+}
+
+[numthreads(256, 1, 1)]
+void HashData(uint3 id : SV_DispatchThreadID)
+{
+    uint index = _IndexBuffer[id.x];
+    float3 pos = _ParticleBuffer[index].position;
+    int3 cellIndex = CellIndex(pos, _SearchGridCellSize);
+    uint flatCellIndex = GetFlatCellIndex(cellIndex, _ParticleBufferCount);
+    _CellIndexBuffer[index] = flatCellIndex;
 }
 
 [numthreads(256, 1, 1)]

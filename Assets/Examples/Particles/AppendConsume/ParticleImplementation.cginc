@@ -1,8 +1,5 @@
-#include "Assets/Scripts/APIs/HLSLs/Particle.cginc"
-
-RWStructuredBuffer<SParticle> _ParticleBuffer;
-ConsumeStructuredBuffer<uint> _PooledParticleBuffer;
-AppendStructuredBuffer<uint> _DeadParticleBuffer;
+#include "Assets/APIs/Particles/DIParticle.cginc"
+#include "Assets/APIs/Particles/Particle.cginc"
 
 
 class Particle : IParticle
@@ -23,6 +20,7 @@ class Particle : IParticle
         p.velocity = velocity;
         p.lifetime = duration;
         p.age = 0;
+        p.color = random3(id);
         p.alive = true;
     }
 

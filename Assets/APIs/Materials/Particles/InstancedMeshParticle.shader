@@ -13,8 +13,8 @@ Shader "Sample/AppendConsumeBuffer"
             #pragma fragment frag
 
             #include "UnityCG.cginc"
-            #include "Assets/Scripts/APIs/HLSLs/Random.cginc"
-            #include "Assets/Scripts/APIs/HLSLs/Particle.cginc"
+            #include "Assets/APIs/Randoms/Random.cginc"
+            #include "Assets/APIs/Particles/DIParticle.cginc"
 
             struct appdata
             {
@@ -25,6 +25,7 @@ Shader "Sample/AppendConsumeBuffer"
             {
                 float4 vertex : SV_POSITION;
                 uint id : TEXCOORD0;
+                float3 color : TEXCOORD1;
             };
 
 
@@ -41,13 +42,14 @@ Shader "Sample/AppendConsumeBuffer"
                    ? 0
                    : UnityObjectToClipPos(v.vertex + p.position);
                 o.id = instanceID;
+                o.color = p.color;
 
                 return o;
             }
 
             fixed4 frag(v2f i) : SV_Target
             {
-                return float4(random3(i.id), 1);
+                return float4(i.color, 1);
             }
             ENDCG
         }

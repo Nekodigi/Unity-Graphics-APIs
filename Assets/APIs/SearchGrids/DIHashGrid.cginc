@@ -1,12 +1,14 @@
 //based on https://github.com/iweinbau/UnityGPUDynamicHashGrid/blob/main/Runtime/Compute/DynamicGridHashingUtils.hlsl
-#ifndef HASH_GRID_DATA_INCLUDED
-#define HASH_GRID_DATA_INCLUDED
+#ifndef DI_HASH_GRID_INCLUDED
+#define DI_HASH_GRID_INCLUDED
 
 #define UINT32_MAX 0xFFFFFFFF
 
 RWStructuredBuffer<uint> _IndexBuffer;
 RWStructuredBuffer<uint> _CellIndexBuffer;
 RWStructuredBuffer<uint> _OffsetsBuffer;
+
+float _SearchGridCellSize;
 
 int3 CellIndex(float3 pos, float radius)
 {
