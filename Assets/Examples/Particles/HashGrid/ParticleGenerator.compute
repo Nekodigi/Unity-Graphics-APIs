@@ -1,0 +1,108 @@
+#pragma enable_d3d11_debug_symbols
+//
+#pragma kernel Initialize
+#pragma kernel Update
+#pragma kernel Emit
+//
+#include "Assets/APIs/Randoms/Random.cginc"
+//#include "./ParticleImplementation.cginc"
+//
+float _DeltaTime;
+float3 _ParticleEmitPosition;
+float _ParticleEmitDuration;
+
+#include "Assets/APIs/Particles/DIParticle.cginc"
+#include "Assets/APIs/Particles/Particle.cginc"
+#include "Assets/APIs/SearchGrids/DIHashGrid.cginc"
+
+
+class Particle : IParticle
+{
+    SParticle p;
+    AppendStructuredBuffer<uint> _deadParticleBuffer;
+
+    //initializer
+    void set_particle(SParticle _p)
+    {
+        p = _p;
+    }
+
+    void init(uint id, float3 position, float3 velocity, float duration)
+    {
+        p.particleId = id;
+        p.position = position;
+        p.velocity = velocity;
+        p.lifetime = duration;
+        p.age = 0;
+        p.alive = true;
+    }
+};
+
+
+[numthreads(8, 1, 1)]
+void Initialize(uint3 id : SV_DispatchThreadID)
+{
+    _DeadParticleBuffer.Append(id.x);
+}
+
+[numthreads(8, 1, 1)]
+void Update(uint3 id : SV_DispatchThreadID)
+{
+    //Particle p;
+    //p.set_particle(_ParticleBuffer[id.x]);
+    SParticle p = _ParticleBuffer[id.x];
+    uint3 targetCellIndex3, targetCellIndex;
+    uint3 cellIndex3 = CellIndex(p.position, _SearchGridCellSize);
+    uint cellIndex = GetFlatCellIndex(cellIndex3, _ParticleBufferCount);
+    //check if they are equal
+    p.color = float4(0, 0, 0, 1);
+    for (int i = -1; i<=1; i++)
+    {
+        for (int j = -1; j<=1; j++)
+        {
+            for (int k = -1; k<=1; k++)
+            {
+                targetCellIndex3 = CellIndex(float3(i, j, k), _SearchGridCellSize);
+                targetCellIndex = GetFlatCellIndex(targetCellIndex3, _ParticleBufferCount);
+                if (targetCellIndex == cellIndex)
+                {
+                    p.color = float4(1, 0, 0, 1);
+                }
+            }
+        }
+    }
+    targetCellIndex3 = CellIndex(float3(0, 0, 0), _SearchGridCellSize);
+    targetCellIndex = GetFlatCellIndex(targetCellIndex3, _ParticleBufferCount);
+    if (targetCellIndex == cellIndex)
+    {
+        p.color = float4(0, 1, 0, 1);
+    }
+    
+    if (p.age < p.lifetime)
+    {
+        p.position += p.velocity * _DeltaTime;
+        p.age += _DeltaTime;
+
+
+        if (p.age >= p.lifetime)
+        {
+            p.alive = false;
+            _DeadParticleBuffer.Append(p.particleId);
+        }
+    }
+    //p.update(_DeltaTime);
+    _ParticleBuffer[id.x] = p;
+}
+
+[numthreads(8, 1, 1)]
+void Emit()
+{
+    uint id = _PooledParticleBuffer.Consume();
+    
+    Particle p;
+    p.set_particle(_ParticleBuffer[id]);
+    p.init(id.x, _ParticleEmitPosition, normalize(random3(id) - 0.5), _ParticleEmitDuration);//normalize(random3(id) - 0.5)
+
+    
+    _ParticleBuffer[id] = p.p;
+}
