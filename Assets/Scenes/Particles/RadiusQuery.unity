@@ -305,7 +305,7 @@ MonoBehaviour:
   maxCount: 10000
   emitCount: 10
   mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
-  hashGridSize: 10
+  hashGridSize: 1
   hashGridCs: {fileID: 7200000, guid: 6fd3213240844e58b0b7864fc7f07a67, type: 3}
 --- !u!1 &410087039
 GameObject:
