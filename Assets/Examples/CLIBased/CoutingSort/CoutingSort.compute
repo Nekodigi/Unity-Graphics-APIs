@@ -1,0 +1,18 @@
+//Couting sort algorithm
+#pragma kernel Histogram;
+
+
+Buffer<uint> InputBuffer;
+RWBuffer<uint> CountBuffer;
+RWBuffer<uint> OutputBuffer;
+
+[numthreads(8, 1, 1)]
+void Histogram(uint3 id : SV_DispatchThreadID)
+{
+    uint value = InputBuffer[id.x];
+    InterlockedAdd(CountBuffer[value], 1);
+}
+
+#define SUM_THREAD_X 8
+//prefix sum
+groupshared uint Block[]

@@ -45,6 +45,7 @@ int k;
 uint size;
 #define GROUP_SIZE 512
 
+
 [numthreads(GROUP_SIZE, 1, 1)]
 void BitonicSort(uint3 id : SV_DispatchThreadID)
 {

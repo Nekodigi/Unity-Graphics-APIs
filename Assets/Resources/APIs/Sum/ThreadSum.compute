@@ -1,0 +1,30 @@
+#pragma kernel Sum;
+
+
+Buffer<uint> _InputBuffer;
+RWBuffer<uint> _OutputBuffer;
+uint _InputBufferCount;
+
+#define SUM_THREAD_X 3
+//prefix sum
+groupshared uint InThreadSum[SUM_THREAD_X];
+[numthreads(SUM_THREAD_X, 1, 1)]
+void Sum(uint id : SV_GroupIndex)
+{
+    uint idx = id;
+    while (idx < _InputBufferCount)
+    {
+        InThreadSum[id] += _InputBuffer[idx];
+        idx += SUM_THREAD_X;
+    }
+    GroupMemoryBarrierWithGroupSync();
+    if (id == 0)
+    {
+        uint sum = 0;
+        for (uint i = 0; i < SUM_THREAD_X; i++)
+        {
+            sum += InThreadSum[i];
+        }
+        _OutputBuffer[0] = sum;
+    }
+}
