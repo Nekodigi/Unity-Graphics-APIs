@@ -23,7 +23,7 @@ namespace APIs.Particles
         protected virtual void Start()
         {
             maxCount = maxCount / THREAD_NUM * THREAD_NUM;
-            emitCount = emitCount / THREAD_NUM * THREAD_NUM;
+            //emitCount = emitCount / THREAD_NUM * THREAD_NUM;
 
             ParticleBuffer = new ComputeBuffer(maxCount, Marshal.SizeOf(typeof(ParticleBase)));
             Particles = new ParticleBase[maxCount];

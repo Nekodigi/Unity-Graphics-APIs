@@ -1,0 +1,77 @@
+#pragma kernel CSInit
+#pragma kernel CSMain
+
+struct Vertex
+{
+    float3 position;
+    float3 normal;
+};
+
+RWStructuredBuffer<Vertex> _VertexBuffer;
+float _Time;
+int _Resolution;
+
+// Simple 2D curl noise function
+float2 curlNoise(float2 p, float t)
+{
+    float n1 = sin(p.x * 3.1 + t) * cos(p.y * 2.7 - t);
+    float n2 = cos(p.x * 2.3 - t) * sin(p.y * 3.7 + t);
+    return float2(n1, n2);
+}
+
+[numthreads(64,1,1)]
+void CSInit(uint id : SV_DispatchThreadID)
+{
+    int quadCount = _Resolution * _Resolution;
+    int vertexCount = quadCount * 6;
+    if (id >= vertexCount) return;
+
+    int quad = id / 6;
+    int triVert = id % 6;
+
+    int qx = quad % _Resolution;
+    int qy = quad / _Resolution;
+
+    int x0 = qx;
+    int x1 = qx + 1;
+    int y0 = qy;
+    int y1 = qy + 1;
+    float fx0 = (float)x0 / _Resolution - 0.5;
+    float fx1 = (float)x1 / _Resolution - 0.5;
+    float fy0 = (float)y0 / _Resolution - 0.5;
+    float fy1 = (float)y1 / _Resolution - 0.5;
+
+    float3 v00 = float3(fx0, 0, fy0);
+    float3 v10 = float3(fx1, 0, fy0);
+    float3 v01 = float3(fx0, 0, fy1);
+    float3 v11 = float3(fx1, 0, fy1);
+
+    float3 pos;
+    if (triVert == 0) pos = v00;
+    else if (triVert == 1) pos = v01;
+    else if (triVert == 2) pos = v10;
+    else if (triVert == 3) pos = v10;
+    else if (triVert == 4) pos = v01;
+    else /* triVert == 5 */ pos = v11;
+
+    Vertex v;
+    v.position = pos;
+    v.normal = float3(0, 1, 0);
+    _VertexBuffer[id] = v;
+}
+
+[numthreads(64,1,1)]
+void CSMain(uint id : SV_DispatchThreadID)
+{
+    int quadCount = _Resolution * _Resolution;
+    int vertexCount = quadCount * 6;
+    if (id >= vertexCount) return;
+
+    Vertex v = _VertexBuffer[id];
+    float2 uv = float2(v.position.x + 0.5, v.position.z + 0.5);
+
+    float2 curl = curlNoise(uv * 2.0, _Time * 0.5);
+    v.position.y = curl.x * 0.2 + curl.y * 0.2;
+
+    _VertexBuffer[id] = v;
+}

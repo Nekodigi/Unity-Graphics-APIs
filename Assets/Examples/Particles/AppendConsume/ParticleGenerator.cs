@@ -56,7 +56,7 @@ namespace Examples.Particles.AppendConsume
             computeShader.SetVector("_ParticleEmitPosition", position);
             computeShader.SetFloat("_ParticleEmitDuration", 3);
 
-            computeShader.Dispatch(kernelIndexEmit, emitCount / THREAD_NUM, 1, 1);
+            computeShader.Dispatch(kernelIndexEmit, emitCount, 1, 1);
         }
     }
 }

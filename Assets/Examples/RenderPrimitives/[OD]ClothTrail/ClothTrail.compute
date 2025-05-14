@@ -1,0 +1,106 @@
+#pragma kernel CSInit
+#pragma kernel CSMain
+
+struct Particle
+{
+    int id;
+    float3 position;
+    float3 axisX;
+    float3 axisY;
+    float3 axisZ;
+};
+
+struct Vertex
+{
+    float3 position;
+    float3 normal;
+};
+
+StructuredBuffer<Particle> _SkeletonBuffer;
+RWStructuredBuffer<Vertex> _VertexBuffer;
+RWStructuredBuffer<Vertex> _DisplayVertexBuffer;
+float _Time;
+int _SegmentCount;
+int _RadialResolution;
+float _Radius;
+
+// Simple 2D curl noise function
+float2 curlNoise(float2 p, float t)
+{
+    float n1 = sin(p.x * 3.1 + t) * cos(p.y * 2.7 - t);
+    float n2 = cos(p.x * 2.3 - t) * sin(p.y * 3.7 + t);
+    return float2(n1, n2);
+}
+
+[numthreads(64,1,1)]
+void CSInit(uint id : SV_DispatchThreadID)
+{
+    int seg = _SegmentCount - 1;
+    int vertsPerQuad = 6;
+    int quadCount = seg * _RadialResolution;
+    int vertexCount = quadCount * vertsPerQuad;
+    if (id >= vertexCount) return;
+
+    int quad = id / vertsPerQuad;
+    int triVert = id % vertsPerQuad;
+
+    int segIdx = quad / _RadialResolution;
+    int ringIdx = quad % _RadialResolution;
+
+    int nextRing = (ringIdx + 1 == _RadialResolution) ? 0 : ringIdx + 1;
+
+    Particle p0 = _SkeletonBuffer[segIdx];
+    Particle p1 = _SkeletonBuffer[segIdx + 1];
+
+    float angle0 = (ringIdx / (float)_RadialResolution) * 2.0 * 3.14159265;
+    float angle1 = (nextRing / (float)_RadialResolution) * 2.0 * 3.14159265;
+
+    float3 offset0 = cos(angle0) * p0.axisX * _Radius + sin(angle0) * p0.axisY * _Radius;
+    float3 offset1 = cos(angle1) * p0.axisX * _Radius + sin(angle1) * p0.axisY * _Radius;
+    float3 offset2 = cos(angle0) * p1.axisX * _Radius + sin(angle0) * p1.axisY * _Radius;
+    float3 offset3 = cos(angle1) * p1.axisX * _Radius + sin(angle1) * p1.axisY * _Radius;
+
+    float3 v0 = p0.position + offset0;
+    float3 v1 = p0.position + offset1;
+    float3 v2 = p1.position + offset0;
+    float3 v3 = p1.position + offset1;
+
+    float3 n0 = normalize(offset0);
+    float3 n1 = normalize(offset1);
+    float3 n2 = normalize(offset0);
+    float3 n3 = normalize(offset1);
+
+    Vertex vert;
+    // ここで三角形の頂点順を逆にする
+    if (triVert == 0) { vert.position = v0; vert.normal = n0; }
+    else if (triVert == 1) { vert.position = v1; vert.normal = n1; }
+    else if (triVert == 2) { vert.position = v2; vert.normal = n2; }
+    else if (triVert == 3) { vert.position = v2; vert.normal = n2; }
+    else if (triVert == 4) { vert.position = v1; vert.normal = n1; }
+    else /* triVert == 5 */ { vert.position = v3; vert.normal = n3; }
+
+    _VertexBuffer[id] = vert;
+}
+
+[numthreads(64,1,1)]
+void CSMain(uint id : SV_DispatchThreadID)
+{
+    int seg = _SegmentCount - 1;
+    int vertsPerQuad = 6;
+    int quadCount = seg * _RadialResolution;
+    int vertexCount = quadCount * vertsPerQuad;
+    if (id >= vertexCount) return;
+
+    Vertex v = _VertexBuffer[id];
+
+    // 後ろほどノイズを強くする
+    float t = _Time;
+    float zRatio = saturate((float)(id / (vertsPerQuad * _RadialResolution)) / seg);
+    float2 uv = float2(v.position.x, v.position.z);
+    float2 curl = curlNoise(uv * 2.0, t * 0.5);
+    //v.position.y += (curl.x * 0.05 + curl.y * 0.05) * zRatio;
+    v.position.xy += curl * 0.3 * zRatio;
+
+    _DisplayVertexBuffer[id] = v;
+}
+
