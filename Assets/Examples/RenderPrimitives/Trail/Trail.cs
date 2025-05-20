@@ -1,58 +1,176 @@
-
 using System;
 using System.Runtime.InteropServices;
 using APIs.Debug;
+using APIs.Shaders;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.Serialization;
+
 
 namespace Examples.RenderPrimitives.Trail
 {
     [ExecuteAlways]
     public class Trail : MonoBehaviour
     {
-        [SerializeField]private int skeletonCount = 32; 
-        [SerializeField]private float skeletonRadius = 1f;
-        
-        
-        private GraphicsBuffer _skeletonBuffer;
-        private Vector3[] _skeletonData;
-        private Material _material;
-        private RenderParams _renderParams;
-        
-        private void OnEnable()
+        [SerializeField] private int particleCount = 2;
+        [SerializeField] private float skeletonRadius = 1f;
+        [SerializeField] private int skeletonCount = 32;
+        [SerializeField] private int vertexCount = 8;
+        [SerializeField] private float trailLifeTime = 1f;
+        [SerializeField] private float vertexRadius = 0.2f;
+
+        private GraphicsBuffer _particleBuffer;
+        private Vector3[] _particleData;
+
+
+        private GraphicsBuffer _skeletonBuffer, _skeletonTangentBuffer, _skeletonFactorBuffer, _skeletonStartBuffer;
+        private Vector3[] _skeletonData, _skeletonTangentData, _skeletonFactorData;
+
+        private GraphicsBuffer _vertexBuffer, _triangleBuffer;
+
+        private Render _render;
+
+        private int _initSkeletonKernelID, _updateSkeletonStartKernelID;
+        private int _initVertexKernelID, _initTrianglesKernelID;
+
+        private ComputeShader _trailCs;
+
+        private void OnValidate()
         {
-            _material = new Material(Shader.Find("Hidden/Trail/Skeleton"));
+            _trailCs = Resources.Load<ComputeShader>("Trail");
+            _render = new Render();
+            ResetBuffers();
+            FindKernels();
             InitDatas();
             InitBuffers();
+            DispatchInit();
+        }
+
+        private void FindKernels()
+        {
+            _initSkeletonKernelID = _trailCs.FindKernel("InitSkeleton");
+            _updateSkeletonStartKernelID = _trailCs.FindKernel("UpdateSkeletonStart");
+            _initVertexKernelID = _trailCs.FindKernel("InitVertex");
+            _initTrianglesKernelID = _trailCs.FindKernel("InitTriangles");
         }
 
         //skeleton position will be half circle
         private void InitDatas()
         {
-            _skeletonData = new Vector3[skeletonCount];
-            for (int i = 0; i < skeletonCount; i++)
+            _particleData = new Vector3[particleCount];
+            float t = 0;
+            for (int i = 0; i < particleCount; i++)
             {
-                float angle = Mathf.PI * i / (skeletonCount - 1);
-                _skeletonData[i] = new Vector3(Mathf.Cos(angle) * skeletonRadius, Mathf.Sin(angle) * skeletonRadius, 0);
+                _particleData[i] = new Vector3(Mathf.Cos(t) * skeletonRadius, Mathf.Sin(t) * skeletonRadius, i);
             }
         }
-        
+
         private void InitBuffers()
         {
-            _skeletonBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, skeletonCount, Marshal.SizeOf(typeof(Vector3)));
-            _skeletonBuffer.SetData(_skeletonData);
+            _particleBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, particleCount,
+                Marshal.SizeOf(typeof(Vector3)));
+            _skeletonBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, particleCount * skeletonCount,
+                Marshal.SizeOf(typeof(Vector3)));
+            _skeletonTangentBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, particleCount * skeletonCount,
+                Marshal.SizeOf(typeof(Vector3)));
+            _skeletonFactorBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, particleCount * skeletonCount,
+                Marshal.SizeOf(typeof(float)));
+            _skeletonStartBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, particleCount,
+                Marshal.SizeOf(typeof(uint)));
+            _vertexBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured,
+                particleCount * skeletonCount * vertexCount,
+                Marshal.SizeOf(typeof(Vector3)));
+            _triangleBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured,
+                particleCount * skeletonCount * vertexCount * 6,
+                Marshal.SizeOf(typeof(int)));
         }
-        
+
+        private void DispatchInit()
+        {
+        }
+
+        private void FixedUpdate()
+        {
+            UpdateData();
+            DispatchUpdate();
+        }
+
         private void Update()
         {
-            Render render = new Render();
-            render.DrawPositions(0.02f, _skeletonBuffer, true);
+            _render.DrawPositions(0.05f, _particleBuffer);
+            _render.DrawSkeletons(0.03f, _skeletonBuffer, _skeletonStartBuffer);
+            _render.DrawVectors(0.2f, _skeletonBuffer, _skeletonTangentBuffer);
+            //_render.DrawPositions(0.02f, _vertexBuffer);
+
+            _render.DrawTriangles(0.05f, _vertexBuffer, _triangleBuffer, lineAlpha: 0);
+        }
+
+        private void UpdateData()
+        {
+            float t = Time.time * 2 * Mathf.PI;
+            for (int i = 0; i < particleCount; i++)
+            {
+                _particleData[i] = new Vector3(Mathf.Cos(t) * skeletonRadius, Mathf.Sin(t) * skeletonRadius, i);
+            }
+
+            _particleBuffer.SetData(_particleData);
+        }
+
+        private void DispatchUpdate()
+        {
+            _trailCs.SetInt("_ParticleCount", particleCount);
+            _trailCs.SetInt("_SkeletonCount", skeletonCount);
+            _trailCs.SetInt("_VertexCount", vertexCount);
+            _trailCs.SetInt("_SkeletonCount", skeletonCount);
+            _trailCs.SetFloat("_VertexRadius", vertexRadius);
+            _trailCs.SetVector("_Forward", Vector3.forward);
+
+            _trailCs.AutoDispatch(_initSkeletonKernelID, particleCount,
+                new[]
+                {
+                    ("_SkeletonBuffer", _skeletonBuffer), ("_ParticleBuffer", _particleBuffer),
+                    ("_SkeletonStartBuffer", _skeletonStartBuffer),
+                    ("_SkeletonTangentBuffer", _skeletonTangentBuffer)
+                });
+
+            _trailCs.AutoDispatch(_updateSkeletonStartKernelID, particleCount,
+                new[]
+                {
+                    ("_SkeletonStartBuffer", _skeletonStartBuffer),
+                });
+
+            _trailCs.AutoDispatch(_initVertexKernelID, particleCount, skeletonCount, vertexCount,
+                new[]
+                {
+                    ("_SkeletonBuffer", _skeletonBuffer), ("_VertexBuffer", _vertexBuffer),
+                    ("_SkeletonTangentBuffer", _skeletonTangentBuffer),
+                }
+            );
+
+            _trailCs.AutoDispatch(_initTrianglesKernelID, particleCount, skeletonCount, vertexCount * 6,
+                new[]
+                {
+                    ("_TriangleBuffer", _triangleBuffer),
+                    ("_SkeletonFactorBuffer", _skeletonFactorBuffer),
+                    ("_SkeletonStartBuffer", _skeletonStartBuffer)
+                }
+            );
+        }
+
+        private void ResetBuffers()
+        {
+            _particleBuffer?.Release();
+            _skeletonBuffer?.Release();
+            _skeletonTangentBuffer?.Release();
+            _skeletonFactorBuffer?.Release();
+            _skeletonStartBuffer?.Release();
+            _vertexBuffer?.Release();
+            _triangleBuffer?.Release();
         }
 
         private void OnDestroy()
         {
-            _skeletonBuffer?.Release();
-            _skeletonBuffer = null;
+            ResetBuffers();
         }
     }
 }

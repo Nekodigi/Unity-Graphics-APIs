@@ -1,0 +1,92 @@
+#define PI 3.14159265358979323846
+#pragma kernel InitVertex
+#pragma kernel InitTriangles
+
+StructuredBuffer<float3> _SkeletonBuffer;
+StructuredBuffer<float3> _SkeletonTangentsBuffer;
+RWStructuredBuffer<float3> _VertexBuffer;
+RWStructuredBuffer<int> _TriangleBuffer;
+RWStructuredBuffer<float> _SkeletonFactorBuffer;
+RWStructuredBuffer<float3> _TriangleInfoBuffer;
+float _VertexCount;
+uint _SkeletonCount;
+float _VertexRadius;
+uint _StartIndex;
+float3 _Forward;
+
+[numthreads(1, 1, 1)]
+void InitVertex(uint3 id : SV_DispatchThreadID)
+{
+    uint skeletonIndex = id.x;
+    uint vertexIndex = id.y;
+    uint absoluteVertexIndex = skeletonIndex * _VertexCount + vertexIndex;
+    //float phi = (vertexIndex / _VertexCount) * 2.0 * PI;
+    float phi = (vertexIndex / _VertexCount) * 2.0 * PI;
+    float3 skeleton = _SkeletonBuffer[skeletonIndex];
+    //RMF Rotation Minimizing Frame : https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/Computation-of-rotation-minimizing-frames.pdf
+    float3 tangent = _SkeletonTangentsBuffer[skeletonIndex];
+    float3 right = normalize(cross(_Forward, tangent));
+    float3 adjustedForward = normalize(cross(tangent, right));
+    float factor = _SkeletonFactorBuffer[skeletonIndex];
+    float3 offset = float3(cos(phi), sin(phi), 0.0) * _VertexRadius * factor;
+    offset = right * offset.x + adjustedForward * offset.y;
+    _VertexBuffer[absoluteVertexIndex] = skeleton + offset;
+}
+
+[numthreads(1, 6, 1)]
+void InitTriangles(uint3 id : SV_DispatchThreadID)
+{
+    uint skeletonIndex = id.x;
+    uint rawVertexIndex = id.y;
+    uint vertexIndex = rawVertexIndex / 6;
+    uint triangleIndex = rawVertexIndex % 6;
+    uint flatIndex = skeletonIndex * _VertexCount * 6 + rawVertexIndex;
+    uint b1 = skeletonIndex * _VertexCount + vertexIndex;
+    uint b2 = skeletonIndex * _VertexCount + (vertexIndex + 1) % _VertexCount;
+    uint nextSkeletonIndex = (skeletonIndex + 1) % _SkeletonCount;
+
+
+    if (nextSkeletonIndex == _StartIndex)
+    {
+        _TriangleBuffer[flatIndex] = 0;
+        return;
+    }
+    //if any of skeleton is dead (factor < 0)
+    if (_SkeletonFactorBuffer[skeletonIndex] < 0.0 || _SkeletonFactorBuffer[nextSkeletonIndex] < 0.0)
+    {
+        _TriangleBuffer[flatIndex] = 0;
+        return;
+    }
+
+    uint t1 = nextSkeletonIndex * _VertexCount + vertexIndex;
+    uint t2 = nextSkeletonIndex * _VertexCount + (vertexIndex + 1) % _VertexCount;
+
+    uint flatTriangleIndex = skeletonIndex * _VertexCount * 2 + rawVertexIndex / 3;
+
+    _TriangleInfoBuffer[flatTriangleIndex] = float3(0, vertexIndex / 5., 0);
+
+
+    switch (triangleIndex)
+    {
+    case 0:
+        _TriangleBuffer[flatIndex] = b1;
+        break;
+    case 1:
+        _TriangleBuffer[flatIndex] = b2;
+        break;
+    case 2:
+        _TriangleBuffer[flatIndex] = t1;
+        break;
+    case 3:
+        _TriangleBuffer[flatIndex] = t1;
+        break;
+    case 4:
+        _TriangleBuffer[flatIndex] = b2;
+        break;
+    case 5:
+        _TriangleBuffer[flatIndex] = t2;
+        break;
+    default:
+        break;
+    }
+}

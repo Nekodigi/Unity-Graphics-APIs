@@ -1,0 +1,146 @@
+#define PI 3.14159265358979323846
+#pragma kernel UpdateSkeletonStart
+#pragma kernel InitSkeleton
+#pragma kernel InitVertex
+#pragma kernel InitTriangles
+
+#pragma multi_compile __ BLOCK_1 BLOCK_4 BLOCK_16 BLOCK_64 BLOCK_256 BLOCK_1024
+
+#include "Assets/APIs/Shaders/Resources/Utils/BlockSize.hlsl"
+
+RWStructuredBuffer<float3> _ParticleBuffer; //nParticle
+RWStructuredBuffer<float3> _SkeletonBuffer; //nParticle * nSkeleton
+RWStructuredBuffer<float3> _SkeletonTangentBuffer; //nParticle * nSkeleton
+RWStructuredBuffer<uint> _SkeletonStartBuffer; //nParticle
+RWStructuredBuffer<int> _TriangleBuffer; //nParticle * nSkeleton * nVertex * 6
+RWStructuredBuffer<float3> _VertexBuffer; //nParticle * nSkeleton * nVertex
+float _VertexCount;
+uint _SkeletonCount;
+float _VertexRadius;
+float3 _Forward;
+
+
+uint _ParticleCount;
+
+[numthreads(1, 1, 1)]
+void UpdateSkeletonStart(uint3 id : SV_DispatchThreadID)
+{
+    uint particleIndex = id.x;
+    uint prev = _SkeletonStartBuffer[particleIndex];
+    _SkeletonStartBuffer[particleIndex] = (prev + 1) % _SkeletonCount;
+}
+
+[numthreads(1, 1, 1)]
+void InitSkeleton(uint3 id : SV_DispatchThreadID)
+{
+    uint particleIndex = id.x;
+    uint indexInSkeleton = _SkeletonStartBuffer[particleIndex];
+    uint prevIndexInSkeleton = (indexInSkeleton - 1 + _SkeletonCount) % _SkeletonCount;
+    uint flatIndex = particleIndex * _SkeletonCount + indexInSkeleton;
+    uint prevFlatIndex = particleIndex * _SkeletonCount + prevIndexInSkeleton;
+
+    _SkeletonBuffer[flatIndex] = _ParticleBuffer[particleIndex];
+
+    _SkeletonTangentBuffer[flatIndex] = normalize(_SkeletonBuffer[flatIndex] - _SkeletonBuffer[prevFlatIndex]);
+}
+
+uint FlatVertexIndex(uint stripIndex, uint skeletonIndex)
+{
+    return (stripIndex * _SkeletonCount + skeletonIndex) * _VertexCount;
+}
+
+uint FlatSkeletonIndex(uint stripIndex, uint skeletonIndex)
+{
+    return (stripIndex * _SkeletonCount + skeletonIndex);
+}
+
+void CalcAxis(inout float3 axisX, inout float3 axisY, inout float3 axisZ)
+{
+    axisX = normalize(cross(axisY, axisZ));
+    axisY = normalize(cross(axisZ, axisX));
+}
+
+[numthreads(1, 1, 1)]
+void InitVertex(uint3 id : SV_DispatchThreadID)
+{
+    uint stripIndex = id.x;
+    uint skeletonIndex = id.y;
+    uint vertexIndex = id.z;
+    uint flatSkeletonIndex = FlatSkeletonIndex(stripIndex, skeletonIndex);
+    float phi = (vertexIndex / _VertexCount) * 2.0 * PI;
+    float3 skeleton = _SkeletonBuffer[flatSkeletonIndex];
+    //TODO RMF Rotation Minimizing Frame : https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/Computation-of-rotation-minimizing-frames.pdf
+    float3 tangent = _SkeletonTangentBuffer[flatSkeletonIndex];
+    float3 right = normalize(cross(_Forward, tangent));
+    float3 adjustedForward = normalize(cross(tangent, right)); //TODO replace with calc axis
+    //float factor = _SkeletonFactorBuffer[skeletonIndex];
+    float factor = 1.0; //TODO CHANGE THIS.
+    float3 offset = float3(cos(phi), sin(phi), 0.0) * _VertexRadius * factor;
+    offset = right * offset.x + adjustedForward * offset.y;
+
+    uint flatVertexIndex = FlatVertexIndex(stripIndex, skeletonIndex) + vertexIndex;
+    _VertexBuffer[flatVertexIndex] = skeleton + offset;
+}
+
+
+[numthreads(16, 8, 8)]
+void InitTriangles(uint3 id : SV_DispatchThreadID)
+{
+    uint stripIndex = id.x;
+    uint skeletonIndex = id.y;
+    uint rawVertexIndex = id.z;
+    uint vertexIndex = rawVertexIndex / 6;
+    uint triangleIndex = rawVertexIndex % 6;
+    uint flatVertexIndex = FlatVertexIndex(stripIndex, skeletonIndex);
+    uint flatIndex = flatVertexIndex * 6 + rawVertexIndex;
+    uint b1 = flatVertexIndex + vertexIndex;
+    uint b2 = flatVertexIndex + (vertexIndex + 1) % _VertexCount;
+
+
+    //if any of skeleton is dead (factor < 0)
+    // if (_SkeletonFactorBuffer[skeletonIndex] < 0.0 || _SkeletonFactorBuffer[nextSkeletonIndex] < 0.0)
+    // {
+    //     _TriangleBuffer[flatIndex] = 0;
+    //     return;
+    // }
+
+    uint nextSkeletonIndex = (skeletonIndex + 1) % _SkeletonCount;
+    uint nextFlatVertexIndex = FlatVertexIndex(stripIndex, nextSkeletonIndex);
+    uint startIndex = _SkeletonStartBuffer[stripIndex];
+    if (nextSkeletonIndex == startIndex)
+    {
+        _TriangleBuffer[flatIndex] = 0;
+        return;
+    }
+    uint t1 = nextFlatVertexIndex + vertexIndex;
+    uint t2 = nextFlatVertexIndex + (vertexIndex + 1) % _VertexCount;
+
+    uint flatTriangleIndex = skeletonIndex * _VertexCount * 2 + rawVertexIndex / 3;
+
+    //_TriangleInfoBuffer[flatTriangleIndex] = float3(0, vertexIndex / 5., 0);
+
+
+    switch (triangleIndex)
+    {
+    case 0:
+        _TriangleBuffer[flatIndex] = b1;
+        break;
+    case 1:
+        _TriangleBuffer[flatIndex] = b2;
+        break;
+    case 2:
+        _TriangleBuffer[flatIndex] = t1;
+        break;
+    case 3:
+        _TriangleBuffer[flatIndex] = t1;
+        break;
+    case 4:
+        _TriangleBuffer[flatIndex] = b2;
+        break;
+    case 5:
+        _TriangleBuffer[flatIndex] = t2;
+        break;
+    default:
+        break;
+    }
+}

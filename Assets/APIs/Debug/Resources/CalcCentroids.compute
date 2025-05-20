@@ -1,0 +1,22 @@
+#pragma kernel CalcCentroids
+
+RWStructuredBuffer<float3> _VertexBuffer;
+RWStructuredBuffer<int> _TriangleBuffer;
+RWStructuredBuffer<float3> _CentroidBuffer;
+
+[numthreads(1, 1, 1)]
+void CalcCentroids(uint3 id : SV_DispatchThreadID)
+{
+    uint triIndex = id.x;
+    // 各三角形は3つのインデックスを持つ
+    int i0 = _TriangleBuffer[triIndex * 3 + 0];
+    int i1 = _TriangleBuffer[triIndex * 3 + 1];
+    int i2 = _TriangleBuffer[triIndex * 3 + 2];
+
+    float3 v0 = _VertexBuffer[i0];
+    float3 v1 = _VertexBuffer[i1];
+    float3 v2 = _VertexBuffer[i2];
+
+    float3 cent = (v0 + v1 + v2) / 3.0f;
+    _CentroidBuffer[triIndex] = cent;
+}

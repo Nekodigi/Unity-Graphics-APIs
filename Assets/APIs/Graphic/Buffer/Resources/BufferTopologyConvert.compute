@@ -1,0 +1,17 @@
+#pragma kernel TrianglesToLines
+
+RWStructuredBuffer<uint> _InBuffer;
+RWStructuredBuffer<uint> _OutBuffer;
+
+[numthreads(1024, 1, 1)]
+void TrianglesToLines(uint3 id : SV_DispatchThreadID)
+{
+    uint triangleIndex = id.x / 6;
+    uint t1 = _InBuffer[triangleIndex * 3];
+    uint t2 = _InBuffer[triangleIndex * 3 + 1];
+    uint t3 = _InBuffer[triangleIndex * 3 + 2];
+    uint indexInTriangle = (id.x / 2) % 3;
+    uint indexInLine = id.x % 2;
+    uint tri[] = {t1, t2, t3};
+    _OutBuffer[id.x] = tri[(indexInTriangle + indexInLine) % 3];
+}

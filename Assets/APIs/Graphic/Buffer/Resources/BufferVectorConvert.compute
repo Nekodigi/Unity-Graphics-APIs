@@ -1,0 +1,40 @@
+#pragma kernel ConvertBuffer
+#pragma multi_compile __ IN_FLOAT IN_FLOAT2 IN_FLOAT3 IN_FLOAT4
+#pragma multi_compile __ OUT_FLOAT OUT_FLOAT2 OUT_FLOAT3 OUT_FLOAT4
+
+RWStructuredBuffer<float> _FloatBufferIn;
+RWStructuredBuffer<float2> _Float2BufferIn;
+RWStructuredBuffer<float3> _Float3BufferIn;
+RWStructuredBuffer<float4> _Float4BufferIn;
+
+RWStructuredBuffer<float> _FloatBufferOut;
+RWStructuredBuffer<float2> _Float2BufferOut;
+RWStructuredBuffer<float3> _Float3BufferOut;
+RWStructuredBuffer<float4> _Float4BufferOut;
+
+[numthreads(64,1,1)]
+void ConvertBuffer(uint id : SV_DispatchThreadID)
+{
+    // 入力値の取得
+    float4 vIn = 0;
+    #if defined(IN_FLOAT)
+        vIn.x = _FloatBufferIn[id];
+    #elif defined(IN_FLOAT2)
+        vIn.xy = _Float2BufferIn[id];
+    #elif defined(IN_FLOAT3)
+        vIn.xyz = _Float3BufferIn[id];
+    #elif defined(IN_FLOAT4)
+        vIn = _Float4BufferIn[id];
+    #endif
+
+    // 出力
+    #if defined(OUT_FLOAT)
+        _FloatBufferOut[id] = vIn.x;
+    #elif defined(OUT_FLOAT2)
+        _Float2BufferOut[id] = vIn.xy;
+    #elif defined(OUT_FLOAT3)
+        _Float3BufferOut[id] = vIn.xyz;
+    #elif defined(OUT_FLOAT4)
+        _Float4BufferOut[id] = vIn;
+    #endif
+}

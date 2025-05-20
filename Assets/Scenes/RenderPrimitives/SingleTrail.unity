@@ -418,15 +418,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 1067604426}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 80c99fe7813f1b646b6861d394bfc3f7, type: 3}
+  m_Script: {fileID: 11500000, guid: 453e0a4ba9964f0395217cc791209ac6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  particleCount: 163
-  skeletonRadius: 1
-  skeletonCount: 8
-  vertexCount: 8
-  trailLifeTime: 1
-  vertexRadius: 0.2
+  skeletonCount: 32
+  vertexCount: 7
+  skeletonRadius: 1.05
+  vertexRadius: 0.62
+  startPosition: 1
+  factorOffset: 0.4
+  forwardRotation: {x: 0, y: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
