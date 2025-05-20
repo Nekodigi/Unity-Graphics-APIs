@@ -1,0 +1,25 @@
+#pragma kernel CalcCentroids
+#include "Assets/APIs/Shaders/Resources/Utils/BlockSize.hlsl"
+
+
+RWStructuredBuffer<float3> _Vertices;
+RWStructuredBuffer<uint> _Indices;
+RWStructuredBuffer<float3> _Centroids;
+
+
+[numthreads(BLOCK_SIZE, 1, 1)]
+void CalcCentroids(uint3 id : SV_DispatchThreadID)
+{
+    uint triIndex = id.x;
+    // 各三角形は3つのインデックスを持つ
+    uint i0 = _Indices[triIndex * 3 + 0];
+    uint i1 = _Indices[triIndex * 3 + 1];
+    uint i2 = _Indices[triIndex * 3 + 2];
+
+    float3 v0 = _Vertices[i0];
+    float3 v1 = _Vertices[i1];
+    float3 v2 = _Vertices[i2];
+
+    float3 cent = (v0 + v1 + v2) / 3.0f;
+    _Centroids[triIndex] = cent;
+}

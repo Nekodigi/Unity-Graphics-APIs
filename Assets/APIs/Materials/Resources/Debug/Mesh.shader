@@ -14,7 +14,6 @@ Shader "Hidden/Debug/InstancedMesh"
             #pragma vertex   vert
             #pragma fragment frag
 
-            #pragma multi_compile __ VECTOR_COLOR
 
             #include "UnityCG.cginc"
 
@@ -30,31 +29,27 @@ Shader "Hidden/Debug/InstancedMesh"
             };
 
 
+            #ifdef INSTANCED
             StructuredBuffer<float3> _Positions;
+            #else
+            float3 _Position;
+            #endif
             float _Size;
             float4 _Color;
 
-            #ifdef VECTOR_COLOR
-            StructuredBuffer<float3> _Vectors;
-            bool _Normalize1;
-            #endif
-
             v2f vert(appdata v, uint instanceID : SV_InstanceID)
             {
-                float3 p = _Positions[instanceID];
-                v.vertex.xyz *= _Size;
+                float3 pos = v.vertex.xyz;
+                pos *= _Size;
+                #ifdef INSTANCED
+                pos = _Positions[instanceID];
+                #else
+                pos = _Position;
+                #endif
+
                 v2f o;
-                o.vertex = UnityObjectToClipPos(v.vertex + p);
-                #ifndef VECTOR_COLOR
+                o.vertex = UnityObjectToClipPos(pos);
                 o.color = _Color;
-                #endif
-                #ifdef VECTOR_COLOR
-                o.color = float4(_Vectors[instanceID], _Color.a);
-                if (_Normalize1)
-                {
-                    o.color = o.color * 0.5 + 0.5;
-                }
-                #endif
 
                 return o;
             }

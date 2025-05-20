@@ -4,6 +4,15 @@ namespace APIs.Shaders
 {
     public static class Extensions
     {
+        public static void SetBuffers(this UnityEngine.ComputeShader computeShader, int kernelIndex,
+            params (string, GraphicsBuffer)[] buffers)
+        {
+            foreach (var (name, buffer) in buffers)
+            {
+                computeShader.SetBuffer(kernelIndex, name, buffer);
+            }
+        }
+
         public static void AutoDispatch(this UnityEngine.ComputeShader computeShader, int kernelID, int numElementsX)
         {
             computeShader.GetKernelThreadGroupSizes(kernelID, out uint threadNumX, out uint threadNumY,

@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
-using APIs.Debug;
+using APIs.DebugUtils;
+using APIs.Geometry;
 using APIs.Shaders;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -80,9 +81,13 @@ namespace Examples.RenderPrimitives.Trail
             _vertexBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured,
                 particleCount * skeletonCount * vertexCount,
                 Marshal.SizeOf(typeof(Vector3)));
+            int triangleCount = particleCount * skeletonCount * vertexCount * 6;
             _triangleBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured,
-                particleCount * skeletonCount * vertexCount * 6,
+                triangleCount,
                 Marshal.SizeOf(typeof(int)));
+
+
+            _centroids = Geometry.CreateBuffersForCentroids(triangleCount);
         }
 
         private void DispatchInit()
@@ -91,18 +96,37 @@ namespace Examples.RenderPrimitives.Trail
 
         private void FixedUpdate()
         {
-            UpdateData();
-            DispatchUpdate();
         }
+
+        private GraphicsBuffer _centroids;
 
         private void Update()
         {
-            _render.DrawPositions(0.05f, _particleBuffer);
-            _render.DrawSkeletons(0.03f, _skeletonBuffer, _skeletonStartBuffer);
-            _render.DrawVectors(0.2f, _skeletonBuffer, _skeletonTangentBuffer);
-            //_render.DrawPositions(0.02f, _vertexBuffer);
+            UpdateData();
+            DispatchUpdate();
+            RuntimeGizmos.DrawPositions(0.05f, _particleBuffer);
+            RuntimeGizmos.DrawTrails(_skeletonBuffer, _skeletonStartBuffer,
+                skeletonCount);
+            // Geometry.CalcCentroids(
+            //     _vertexBuffer, _triangleBuffer, _centroids);
+            // RuntimeGizmos.DrawPositions(0.01f, _centroids);
 
-            _render.DrawTriangles(0.05f, _vertexBuffer, _triangleBuffer, lineAlpha: 0);
+            RuntimeGizmos.DrawVectors(_skeletonBuffer, _skeletonTangentBuffer);
+            // //_render.DrawPositions(0.02f, _vertexBuffer);
+            // Primitive lines = new Primitive()
+            // {
+            //     Vertices = _vertexBuffer,
+            //     Indices = _triangleBuffer,
+            //     Topology = MeshTopology.LineStrip,
+            // };
+            // RuntimeGizmos.DrawPrimitive(lines, new Color(1, 1, 1, 1f));
+            // Primitive triangles = new Primitive()
+            // {
+            //     Vertices = _vertexBuffer,
+            //     Indices = _triangleBuffer,
+            //     Topology = MeshTopology.Triangles
+            // };
+            // RuntimeGizmos.DrawPrimitive(triangles, new Color(1, 1, 1, 1f));
         }
 
         private void UpdateData()

@@ -1,6 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
-using APIs.Debug;
+using APIs.DebugUtils;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Serialization;

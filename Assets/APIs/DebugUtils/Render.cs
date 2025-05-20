@@ -1,7 +1,7 @@
 using APIs.Graphic.Buffer;
 using UnityEngine;
 
-namespace APIs.Debug
+namespace APIs.DebugUtils
 {
     public class Render
     {
@@ -24,20 +24,20 @@ namespace APIs.Debug
 
         private void InitMaterials()
         {
-            _instancedMeshMaterial = new Material(Shader.Find("Hidden/Debug/InstancedMesh"));
-            _instancedMeshVectorColorMaterial = new Material(_instancedMeshMaterial);
-            _instancedMeshVectorColorMaterial.EnableKeyword("VECTOR_COLOR");
-            _instancedLineStripMaterial = new Material(Shader.Find("Hidden/Debug/InstancedLineStrip"));
-            _primitiveMaterial = new Material(Shader.Find("Hidden/Debug/Primitive"));
-            _primitiveMaterialIndexed = new Material(_primitiveMaterial);
-            _primitiveMaterialIndexed.EnableKeyword("INDEXED");
-            _primitiveTriangleShadedMaterial =
-                new Material(Shader.Find("Hidden/Debug/PrimitiveTriangleShaded"));
-            _primitiveTriangleShadedVectorColorMaterial =
-                new Material(_primitiveTriangleShadedMaterial);
-            _primitiveTriangleShadedVectorColorMaterial.EnableKeyword("VECTOR_COLOR");
-            _vectorLineMaterial = new Material(Shader.Find("Hidden/Debug/VectorLine"));
-            _calcCentroidsCs = Resources.Load<ComputeShader>("CalcCentroids");
+            // _instancedMeshMaterial = new Material(Shader.Find("Hidden/Debug/InstancedMesh"));
+            // _instancedMeshVectorColorMaterial = new Material(_instancedMeshMaterial);
+            // _instancedMeshVectorColorMaterial.EnableKeyword("VECTOR_COLOR");
+            // _instancedLineStripMaterial = new Material(Shader.Find("Hidden/Debug/InstancedLineStrip"));
+            // _primitiveMaterial = new Material(Shader.Find("Hidden/Debug/Primitive"));
+            // _primitiveMaterialIndexed = new Material(_primitiveMaterial);
+            // _primitiveMaterialIndexed.EnableKeyword("INDEXED");
+            // _primitiveTriangleShadedMaterial =
+            //     new Material(Shader.Find("Hidden/Debug/PrimitiveTriangleShaded"));
+            // _primitiveTriangleShadedVectorColorMaterial =
+            //     new Material(_primitiveTriangleShadedMaterial);
+            // _primitiveTriangleShadedVectorColorMaterial.EnableKeyword("VECTOR_COLOR");
+            // _vectorLineMaterial = new Material(Shader.Find("Hidden/Debug/VectorLine"));
+            // _calcCentroidsCs = Resources.Load<ComputeShader>("CalcCentroids");
         }
 
         private RenderParams GetBasicRenderParams(Material mat)
