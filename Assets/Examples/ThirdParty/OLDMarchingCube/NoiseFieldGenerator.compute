@@ -1,0 +1,18 @@
+#pragma kernel NoiseFieldGenerator
+
+#include "Packages/jp.keijiro.noiseshader/Shader/SimplexNoise3D.hlsl"
+
+uint3 _Dims;
+float _Scale;
+float _Time;
+RWStructuredBuffer<float> _Voxels;
+
+[numthreads(8, 8, 8)]
+void NoiseFieldGenerator(uint3 id : SV_DispatchThreadID)
+{
+    float3 p = _Scale * (id + 0.5 - _Dims / 2);
+    float value = -p.y;
+    value += SimplexNoise(p * 0.83 + float3(-0.37, -0.12, 0) * _Time) * 0.5;
+    value += SimplexNoise(p * 0.72 + float3(0.21, +0.07, 0) * _Time) * 0.5;
+    _Voxels[id.x + _Dims.x * (id.y + _Dims.y * id.z)] = sin(p.x);
+}

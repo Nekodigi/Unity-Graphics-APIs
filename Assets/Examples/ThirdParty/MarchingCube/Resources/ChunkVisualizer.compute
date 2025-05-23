@@ -1,0 +1,17 @@
+#pragma kernel TrianglesToVertices
+#include "Assets/APIs/Shaders/Resources/ThirdParty/MarchingCubes/MarchingCubesHelper.hlsl"
+StructuredBuffer<Triangle> triangles;
+RWStructuredBuffer<float3> vertices;
+RWStructuredBuffer<uint> indices;
+
+[numthreads(1,1,1)]
+void TrianglesToVertices(uint3 id : SV_DispatchThreadID)
+{
+    Triangle tangle = triangles[id.x];
+    vertices[id.x * 3] = tangle.vertexA;
+    vertices[id.x * 3 + 1] = tangle.vertexB;
+    vertices[id.x * 3 + 2] = tangle.vertexC;
+    indices[id.x * 3] = id.x * 3;
+    indices[id.x * 3 + 1] = id.x * 3 + 1;
+    indices[id.x * 3 + 2] = id.x * 3 + 2;
+}

@@ -1,0 +1,12 @@
+#pragma kernel ToVoxels
+
+uint3 _Dims;
+RWStructuredBuffer<float> _Voxels;
+Texture3D<float> _Texture3D : register(t0);
+
+[numthreads(8, 8, 8)]
+void ToVoxels(uint3 id : SV_DispatchThreadID)
+{
+    float value = _Texture3D.Load(int4(id, 0)).r;
+    _Voxels[id.x + _Dims.x * (id.y + _Dims.y * id.z)] = value;
+}

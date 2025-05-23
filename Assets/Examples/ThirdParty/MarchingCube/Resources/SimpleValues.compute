@@ -1,0 +1,16 @@
+#pragma kernel SimpleValues
+
+uint _Resolution;
+RWStructuredBuffer<float> _ValuesBuffer;
+float _Time;
+
+[numthreads(1,1,1)]
+void SimpleValues(uint3 id : SV_DispatchThreadID)
+{
+    // Calculate the index in the buffer
+    uint index = id.x + id.y * _Resolution + id.z * _Resolution * _Resolution;
+
+    // Set the value based on a simple function
+    _ValuesBuffer[index] = sin(id.x * 0.5 + _Time) * sin(id.y * 0.5) *
+        sin(id.z * 0.5) - 0.2;
+}

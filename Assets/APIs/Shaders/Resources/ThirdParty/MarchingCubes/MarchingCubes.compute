@@ -1,0 +1,97 @@
+//based on SebLague/Marching Cubes
+//https://github.com/SebLague/Marching-Cubes
+
+#pragma kernel March
+//#pragma kernel InitIndices
+#pragma multi_compile __ TEXTURE3D
+
+#include "MarchTables.hlsl"
+#include "MarchingCubesHelper.hlsl"
+
+static const int N_THREAD = 8;
+
+AppendStructuredBuffer<Triangle> triangles;
+// AppendStructuredBuffer<float3> vertices;
+// AppendStructuredBuffer<uint> indices;
+
+#ifdef TEXTURE3D
+RWStructuredBuffer<float> values;
+#else
+RWStructuredBuffer<float4> points;
+#endif
+
+[numthreads(N_THREAD,N_THREAD,N_THREAD)]
+void March(int3 id : SV_DispatchThreadID)
+{
+    // Stop one point before the end because voxel includes neighbouring points
+    if (id.x >= numPointsPerAxis - 1 || id.y >= numPointsPerAxis - 1 || id.z >= numPointsPerAxis - 1)
+    {
+        return;
+    }
+
+    #ifdef TEXTURE3D
+    float cubeCornersValue[8] = {
+        values[indexFromCoord(id.x, id.y, id.z)],
+        values[indexFromCoord(id.x + 1, id.y, id.z)],
+        values[indexFromCoord(id.x + 1, id.y, id.z + 1)],
+        values[indexFromCoord(id.x, id.y, id.z + 1)],
+        values[indexFromCoord(id.x, id.y + 1, id.z)],
+        values[indexFromCoord(id.x + 1, id.y + 1, id.z)],
+        values[indexFromCoord(id.x + 1, id.y + 1, id.z + 1)],
+        values[indexFromCoord(id.x, id.y + 1, id.z + 1)]
+    };
+    float4 cubeCorners[8] = {
+        float4(id.x, id.y, id.z, cubeCornersValue[0]),
+        float4(id.x + 1, id.y, id.z, cubeCornersValue[1]),
+        float4(id.x + 1, id.y, id.z + 1, cubeCornersValue[2]),
+        float4(id.x, id.y, id.z + 1, cubeCornersValue[3]),
+        float4(id.x, id.y + 1, id.z, cubeCornersValue[4]),
+        float4(id.x + 1, id.y + 1, id.z, cubeCornersValue[5]),
+        float4(id.x + 1, id.y + 1, id.z + 1, cubeCornersValue[6]),
+        float4(id.x, id.y + 1, id.z + 1, cubeCornersValue[7])
+    };
+    #else
+    float4 cubeCorners[8] = {
+        points[indexFromCoord(id.x, id.y, id.z)],
+        points[indexFromCoord(id.x + 1, id.y, id.z)],
+        points[indexFromCoord(id.x + 1, id.y, id.z + 1)],
+        points[indexFromCoord(id.x, id.y, id.z + 1)],
+        points[indexFromCoord(id.x, id.y + 1, id.z)],
+        points[indexFromCoord(id.x + 1, id.y + 1, id.z)],
+        points[indexFromCoord(id.x + 1, id.y + 1, id.z + 1)],
+        points[indexFromCoord(id.x, id.y + 1, id.z + 1)]
+    };
+    #endif
+    int cubeIndex = GetCubeIndex(cubeCorners);
+
+    // Create triangles for current cube configuration
+    for (int i = 0; triangulation[cubeIndex][i] != -1; i += 3)
+    {
+        // Get indices of corner points A and B for each of the three edges
+        // of the cube that need to be joined to form the triangle.
+        int a0 = cornerIndexAFromEdge[triangulation[cubeIndex][i]];
+        int b0 = cornerIndexBFromEdge[triangulation[cubeIndex][i]];
+
+        int a1 = cornerIndexAFromEdge[triangulation[cubeIndex][i + 1]];
+        int b1 = cornerIndexBFromEdge[triangulation[cubeIndex][i + 1]];
+
+        int a2 = cornerIndexAFromEdge[triangulation[cubeIndex][i + 2]];
+        int b2 = cornerIndexBFromEdge[triangulation[cubeIndex][i + 2]];
+
+        Triangle tri;
+        tri.vertexA = interpolateVerts(cubeCorners[a0], cubeCorners[b0]);
+        tri.vertexB = interpolateVerts(cubeCorners[a1], cubeCorners[b1]);
+        tri.vertexC = interpolateVerts(cubeCorners[a2], cubeCorners[b2]);
+        triangles.Append(tri);
+        // vertices.Append(tri.vertexA);
+        // vertices.Append(tri.vertexB);
+        // vertices.Append(tri.vertexC);
+    }
+}
+
+//
+// [numthreads(1,1,1)]
+// void InitIndices(uint3 id : SV_DispatchThreadID)
+// {
+//     indices.Append(id.x);
+// }
