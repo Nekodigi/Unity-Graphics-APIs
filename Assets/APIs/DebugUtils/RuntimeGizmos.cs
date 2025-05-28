@@ -39,6 +39,11 @@ namespace APIs.DebugUtils
             DrawInternal(null, mesh, positions: positions, size: size, color: color);
         }
 
+        public static void GetMeshBuilder()
+        {
+            
+        }
+
         public static void DrawSDF(Texture3D texture)
         {
         }

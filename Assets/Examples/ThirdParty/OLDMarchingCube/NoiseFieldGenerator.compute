@@ -1,18 +1,26 @@
 #pragma kernel NoiseFieldGenerator
+#pragma enable_d3d11_debug_symbols
 
 #include "Packages/jp.keijiro.noiseshader/Shader/SimplexNoise3D.hlsl"
 
 uint3 _Dims;
-float _Scale;
 float _Time;
+float3 _Offset;
 RWStructuredBuffer<float> _Voxels;
+//Texture3D
+Texture3D<float> _Texture3D;
+float3 _Texture3DResolution;
+SamplerState sampler_Texture3D;
 
 [numthreads(8, 8, 8)]
 void NoiseFieldGenerator(uint3 id : SV_DispatchThreadID)
 {
-    float3 p = _Scale * (id + 0.5 - _Dims / 2);
+    //float3 p = _Scale * (id + 0.5 - _Dims / 2);
+    float3 p = (id + _Offset) / _Texture3DResolution;
     float value = -p.y;
     value += SimplexNoise(p * 0.83 + float3(-0.37, -0.12, 0) * _Time) * 0.5;
     value += SimplexNoise(p * 0.72 + float3(0.21, +0.07, 0) * _Time) * 0.5;
-    _Voxels[id.x + _Dims.x * (id.y + _Dims.y * id.z)] = sin(p.x);
+    value = -_Texture3D.SampleLevel(sampler_Texture3D, p, 0).x;
+
+    _Voxels[id.x + _Dims.x * (id.y + _Dims.y * id.z)] = value;
 }

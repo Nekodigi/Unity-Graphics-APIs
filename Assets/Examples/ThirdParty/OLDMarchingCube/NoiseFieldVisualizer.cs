@@ -9,7 +9,7 @@ namespace MarchingCubes
         [SerializeField] Vector3Int _dimensions = new Vector3Int(64, 32, 64);
 
         //private Vector3Int _dimensions;
-        [SerializeField] float _gridScale = 4.0f / 64;
+        [SerializeField] float width = 4.0f;
         [SerializeField] int _triangleBudget = 65536;
         [SerializeField] float _targetValue = 0;
 
@@ -38,6 +38,7 @@ namespace MarchingCubes
         {
             //get size of texture3D
             //_dimensions = new Vector3Int(_texture3D.width, _texture3D.height, _texture3D.depth);
+            _builderCompute = Resources.Load<ComputeShader>("ThirdParty/MarchingCubes/MarchingCubes");
             _voxelBuffer = new ComputeBuffer(VoxelCount, sizeof(float));
             _builder = new MeshBuilder(_dimensions, _triangleBudget, _builderCompute);
             Debug.Log(_dimensions);
@@ -53,14 +54,17 @@ namespace MarchingCubes
         {
             // Noise field update
             _volumeCompute.SetInts("_Dims", _dimensions);
-            _volumeCompute.SetFloat("_Scale", _gridScale);
+            //_volumeCompute.SetFloat("_Scale", 1f / Mathf.Max(_dimensions.x, _dimensions.y, _dimensions.z));
+
             _volumeCompute.SetFloat("_Time", Time.time);
             _volumeCompute.SetTexture(0, "_Texture3D", _texture3D);
             _volumeCompute.SetBuffer(0, "_Voxels", _voxelBuffer);
+            _volumeCompute.SetVector("_Texture3DResolution",
+                new Vector3(_texture3D.width, _texture3D.height, _texture3D.depth));
             _volumeCompute.DispatchThreads(0, _dimensions);
 
-            // Isosurface reconstruction
-            _builder.BuildIsosurface(_voxelBuffer, _targetValue, _gridScale);
+            _builder.BuildIsosurface(_voxelBuffer, _targetValue,
+                width / Mathf.Max(_dimensions.x, _dimensions.y, _dimensions.z));
             GetComponent<MeshFilter>().sharedMesh = _builder.Mesh;
         }
 
