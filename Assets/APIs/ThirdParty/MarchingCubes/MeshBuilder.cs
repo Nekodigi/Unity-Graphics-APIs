@@ -6,7 +6,7 @@ namespace MarchingCubes
 //
 // Isosurface mesh builder with the marching cubes algorithm
 //
-    sealed class MeshBuilder : System.IDisposable
+    public class MeshBuilder : System.IDisposable
     {
         #region Public members
 
@@ -21,7 +21,7 @@ namespace MarchingCubes
         public void Dispose()
             => ReleaseAll();
 
-        public void BuildIsosurface(ComputeBuffer voxels, float target, float scale)
+        public void BuildIsosurface(GraphicsBuffer voxels, float target, float scale)
             => RunCompute(voxels, target, scale);
 
         #endregion
@@ -48,7 +48,7 @@ namespace MarchingCubes
             ReleaseMesh();
         }
 
-        void RunCompute(ComputeBuffer voxels, float target, float scale)
+        void RunCompute(GraphicsBuffer voxels, float target, float scale)
         {
             _counterBuffer.SetCounterValue(0);
 

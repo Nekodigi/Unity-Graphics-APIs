@@ -1,7 +1,8 @@
 using APIs.Geometry;
 using JetBrains.Annotations;
+using MarchingCubes;
 using UnityEngine;
-using UnityEngine.InputSystem.Utilities;
+
 
 namespace APIs.DebugUtils
 {
@@ -39,13 +40,32 @@ namespace APIs.DebugUtils
             DrawInternal(null, mesh, positions: positions, size: size, color: color);
         }
 
-        public static void GetMeshBuilder()
+        public static (MeshBuilder, GraphicsBuffer) InitDrawSDF(int resolution = 256, int triangleBudget = 655360)
         {
-            
+            var builderCompute = Resources.Load<ComputeShader>("ThirdParty/MarchingCubes/MarchingCubes");
+            var meshBuilder = new MeshBuilder(new Vector3Int(resolution, resolution, resolution), triangleBudget,
+                builderCompute);
+            var voxelBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, resolution * resolution * resolution
+                , sizeof(float));
+            return (meshBuilder, voxelBuffer);
         }
 
-        public static void DrawSDF(Texture3D texture)
+        public static void DrawSDF(Texture3D texture, MeshFilter meshFilter,
+            (MeshBuilder meshBuilder, GraphicsBuffer voxelBuffer) cache, float targetValue = 0, float size = 1,
+            int resolution = 256)
         {
+            var volumeCompute = Resources.Load<ComputeShader>("ThirdParty/MarchingCubes/VolumeCompute");
+            volumeCompute.SetInts("_Dims", new Vector3Int(resolution, resolution, resolution));
+            volumeCompute.SetFloat("_Time", Time.time);
+            volumeCompute.SetTexture(0, "_Texture3D", texture);
+            volumeCompute.SetBuffer(0, "_Voxels", cache.voxelBuffer);
+            volumeCompute.SetVector("_Texture3DResolution",
+                new Vector3(texture.width, texture.height, texture.depth));
+            volumeCompute.DispatchThreads(0, new Vector3Int(resolution, resolution, resolution));
+
+            cache.meshBuilder.BuildIsosurface(cache.voxelBuffer, targetValue,
+                size / resolution);
+            meshFilter.sharedMesh = cache.meshBuilder.Mesh;
         }
 
         public static void DrawPrimitive(Primitive primitive, Color? color = null)

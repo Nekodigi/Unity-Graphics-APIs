@@ -165,13 +165,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 94333b437c144a0fab25fc5a5525ae39, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _dimensions: {x: 64, y: 64, z: 64}
-  _gridScale: 0.0625
-  _triangleBudget: 65536
-  _targetValue: 0
-  _volumeCompute: {fileID: 7200000, guid: 6846ce91a37047fba85c14f25fcc3113, type: 3}
-  _builderCompute: {fileID: 7200000, guid: 88264fa2e4f8463381d0051d21f6f2c6, type: 3}
-  _texture3D: {fileID: 11700000, guid: e2188b6ccb5bb1044b7a9a60f265e877, type: 2}
+  targetValue: 0
+  texture3D: {fileID: 11700000, guid: bb3c5eac6c592e3468e87c2160de57b6, type: 2}
 --- !u!23 &277543221
 MeshRenderer:
   m_ObjectHideFlags: 0
