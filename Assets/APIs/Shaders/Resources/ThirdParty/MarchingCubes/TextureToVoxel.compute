@@ -1,0 +1,22 @@
+#pragma kernel NoiseFieldGenerator
+#pragma enable_d3d11_debug_symbols
+
+uint3 _Dims;
+float _Time;
+float3 _Offset;
+RWStructuredBuffer<float> _Voxels;
+//Texture3D
+Texture3D<float> _Texture3D;
+float3 _VoxelResolution;
+SamplerState sampler_Texture3D;
+
+[numthreads(8, 8, 8)]
+void NoiseFieldGenerator(uint3 id : SV_DispatchThreadID)
+{
+    //get total dispatch size
+
+    float3 p = (id + _Offset) / _VoxelResolution;
+    float value = -_Texture3D.SampleLevel(sampler_Texture3D, p, 0).x;
+
+    _Voxels[id.x + _Dims.x * (id.y + _Dims.y * id.z)] = value;
+}

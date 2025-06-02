@@ -1,0 +1,22 @@
+#pragma kernel SliceVolume
+#pragma multi_compile __ X_PLANE Y_PLANE Z_PLANE
+
+Texture3D<float4> _Texture3D;
+RWTexture2D<float> _OutputTexture;
+int _SlicePosition;
+
+[numthreads(8, 8, 1)]
+void SliceVolume(uint3 id : SV_DispatchThreadID)
+{
+    #if defined(X_PLANE)
+    float4 targetData = _Texture3D[uint3(_SlicePosition, id.y, id.x)];
+    #elif defined(Y_PLANE)
+    float4 targetData = _Texture3D[uint3(id.x, _SlicePosition, id.y)];
+    #elif defined(Z_PLANE)
+    float4 targetData = _Texture3D[uint3(id.x, id.y, _SlicePosition)];
+    #else
+    // If no plane is defined, we can return early or handle it as an error.
+    float4 targetData = float4(1, 0, 1, 0);
+    #endif
+    _OutputTexture[id.xy] = targetData.r;
+}

@@ -1,0 +1,22 @@
+#pragma kernel CSMain
+
+Texture3D<float4> _SourceTex; // Input
+RWTexture3D<float4> _DestTex; // Output (must match RenderTexture format, e.g., ARGBFloat)
+
+[numthreads(8,8,8)] // Define thread group size
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    uint texWidth, texHeight, texDepth;
+    // Get the dimensions of the destination texture
+    _DestTex.GetDimensions(texWidth, texHeight, texDepth);
+
+    // Boundary check: ensure the current thread is within the bounds of the texture
+    // if (id.x >= texWidth || id.y >= texHeight || id.z >= texDepth)
+    // {
+    //     return; // Exit if this thread is outside the texture dimensions
+    // }
+
+    // Perform the copy: read from source texture and write to destination texture
+    // id is uint3 (x,y,z). int4(id.xyz, 0) specifies coordinates and mip level 0.
+    _DestTex[id.xyz] = _SourceTex.Load(int4(id.xyz, 0));
+}

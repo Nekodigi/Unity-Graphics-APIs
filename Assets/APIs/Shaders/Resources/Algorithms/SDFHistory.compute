@@ -1,0 +1,33 @@
+#pragma kernel NoiseFieldGenerator
+#pragma enable_d3d11_debug_symbols
+
+Texture2D<float4> _InTex;
+Texture3D<float> _PrevHistoryTex;
+RWTexture3D<float> _OutHistoryTex;
+float3 _Texture3DResolution;
+
+
+[numthreads(8, 8, 8)]
+void NoiseFieldGenerator(uint3 id : SV_DispatchThreadID)
+{
+    //write Texture2D to first slice of Texture3D
+    //slide rest of Texture3D down by one slice
+    float3 p = (id + 0.5) / _Texture3DResolution;
+
+    float value = -_InTex[id.xy].g + 0.1;
+    //shift all slices down by one
+    if (id.z == _Texture3DResolution.z - 1 || id.z == 0 || id.x == 0 || id.y == 0 || id.x == _Texture3DResolution.x - 1
+        || id.y == _Texture3DResolution.y - 1)
+    {
+        _OutHistoryTex[id.xyz] = 1;
+    }
+    else if (id.z > 1)
+    {
+        _OutHistoryTex[id.xyz] =
+            _PrevHistoryTex[id.xyz - uint3(0, 0, 1)];
+    }
+    else
+    {
+        _OutHistoryTex[id.xyz] = value;
+    }
+}
